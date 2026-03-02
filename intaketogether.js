@@ -110,11 +110,15 @@ javascript:(function(){
                                 if (spl.match(/together|came in with|found with/i) != null) {
                                     for (let np of spl.split(/\s+/)) {
                                         res = np.match(/(A?[0-9]{7})/i);
-                                        if (res != null && res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+                                        if (res != null) {
                                             if (!res[1].toLowerCase().startsWith("a")) {
                                                 res[1] = "A" + res[1];
                                             }
-                                            dogList[li].others.set(res[1], null);
+
+                                            if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+                                                console.log("Adding " + res[1].toUpperCase() + " as other dog for " + dogList[li].aId + ", li=" + li);
+                                                dogList[li].others.set(res[1].toUpperCase(), null);
+                                            }
                                         }
                                     }
                                 }
@@ -123,9 +127,9 @@ javascript:(function(){
                         }
                     }
 
-                    if (li < dogList.length - 1) {
+                    li++;
+                    if (li < dogList.length) {
                         document.write(">");
-                        li++;
                         dReq.open("GET", D_REQ + dogList[li].aId, true);
                         dReq.send(null);
                     } else {
@@ -214,11 +218,16 @@ javascript:(function(){
                                     console.log("Found intake together entry in priority");
                                     for (let np of spl.split(/\s+/)) {
                                         res = np.match(/(A?[0-9]{7})/i);
-                                        if (res != null && res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+
+                                        if (res != null) {
                                             if (!res[1].toLowerCase().startsWith("a")) {
                                                 res[1] = "A" + res[1];
                                             }
-                                            dogList[li].others.set(res[1], null);
+
+                                            if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+                                                console.log("Adding " + res[1].toUpperCase() + " as other dog for Priority " + dogList[li].aId + ", li=" + li);
+                                                dogList[li].others.set(res[1].toUpperCase(), null);
+                                            }
                                         }
                                     }
                                 }
@@ -400,5 +409,4 @@ javascript:(function(){
     }
 
 })();
-
 
