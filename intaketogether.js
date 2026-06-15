@@ -8,7 +8,7 @@ javascript:(function(){
     var pdReq = new XMLHttpRequest();
     var dogList = [];
     var li = 0;
-    var pi = 0;
+    var PRI_DOG_START = 0;
     var pageNum = 0;
     var ENTRIES_PER_PAGE = 21;
     var totalCount = 0;
@@ -137,8 +137,8 @@ javascript:(function(){
                         console.log(dogList);
                         pageNum = 1;
                         /* Mark where priority dogs start */
-                        pi = li;
-                        console.log("Priority index is " + pi);
+                        PRI_DOG_START = li;
+                        console.log("Priority index is " + PRI_DOG_START);
                         document.write("<br>Getting Priority page " + pageNum);
                         pReq.open( "GET", P_REQ + pageNum, true);
                         pReq.send(null);
@@ -192,7 +192,7 @@ javascript:(function(){
                         document.write("<br>Getting Priority dog details...");
                         console.log("Getting priority details");
                         console.log(dogList);
-                        li = pi;
+                        li = PRI_DOG_START;
                         pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
                         pdReq.send(null);
                     }
@@ -279,9 +279,10 @@ javascript:(function(){
                                 loc = dc.getElementsByClassName("d-block")[0].innerText.trim();
                             }
                         }
-                        dataObj = {name:name, stat:loc, adoptable:true};
+                        dataObj = {name:name, stat:loc, adoptable:true, lnk:null};
+
                     } else {
-                        console.log("dog not available: " + aId);
+                           console.log("dog not available in Adoptables: " + aId);
                     }
                     dogList[li].others.set(aId, dataObj);
                     processOthers();
@@ -295,14 +296,11 @@ javascript:(function(){
         console.log("doSS: " + doSS + ", li: " + li);
         for (let z=li; z<dogList.length; z++) {
             for ([aId,v] of dogList[z].others) {
-                console.log("value is: " + JSON.stringify(v));
+                console.log("processOthers for " + dogList[z].aId + ": Others value=" + JSON.stringify(v));
                 if ((!doSS && v == null) || (doSS && Object.keys(v).length === 0)) {
-                    console.log("processOthers: Getting " + (!doSS?"details":"SS") + " for " + aId);
+                    console.log("Getting " + (!doSS?"details":"SS") + " for other dog " + aId);
                     doSend = true;
                     li = z;
-                    /* TODO: Need to handle case if an "other" dog is on the priority portal 
-                     * Right now, it won't get the link, it will just show the dog status from SS
-                     * */
 
                     document.write(".");
                     if (!doSS) {
@@ -357,7 +355,23 @@ javascript:(function(){
                     } else {
                         console.log("Not a valid aId in SS: " + aId);
                     }
-                    dogList[li].others.set(aId,{name:name, stat:status});
+
+                    var dataObj = {name:name, stat:status, lnk:null};
+
+                    /* At this point we know the Other dog is in SS but may not have been adoptable
+                     * If the dog is not adoptable, check if the dog is in the Priority list
+                     * We could also pre-filter by checking the SS status to see if its a non-terminal
+                     * status like "Under Review"
+                     */
+                   console.log("Checking if Other dog " + aId + " is in Priority list");
+                   for (k=PRI_DOG_START;k<dogList.length;k++) {
+                       if (dogList[k].aId == aId) {
+                           console.log("Other dog " + dogList[k].aId + " found in Priority list for " + aId);
+                           dataObj.lnk = dogList[k].lnk;
+                           break;
+                        }
+                    }
+                    dogList[li].others.set(aId, dataObj);
                     processOthers(true);
                 }
             }
@@ -391,7 +405,7 @@ javascript:(function(){
                     "<td style='max-width: 100px'>" + d.loc + "</td>";
              bodyStr += "<td><table border='1'>";
              d.others.forEach((v,aId) => {
-                 bodyStr += "<tr><td>" + (v.adoptable?D_HREF.replaceAll(AID,aId):aId) + "</td><td>" + v.name + "</td><td>" + v.stat + "</td></tr>";
+                 bodyStr += "<tr><td>" + (v.adoptable?D_HREF.replaceAll(AID,aId):(v.lnk?P_HREF.replace(LNK,v.lnk).replace(AID,aId):aId)) + "</td><td>" + v.name + "</td><td>" + v.stat + "</td></tr>";
              });
              bodyStr += "</table></td>";
         });
