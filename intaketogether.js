@@ -29,7 +29,7 @@ javascript:(function(){
     var S_REQ1 = document.location.protocol + "//apps.pets.maricopa.gov/adoptPets/Home/AnimalGrid?sizeFilter=1&ageFilter=1&genderFilter=1&pageNumber=";
     /* a5152151 following dogs were found together (lots)
      * a5149138 dogs found together (2)
-     * a5150369 came in together (3) 
+     * a5150369 came in together (3)
      *
      S_REQ2 += "&animalId=a5149138";
      S_REQ2 += "&animalId=a5150369";
@@ -116,7 +116,7 @@ javascript:(function(){
                                             }
 
                                             if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
-                                                console.log("Adding " + res[1].toUpperCase() + " as other dog for " + dogList[li].aId + ", li=" + li);
+                                                console.log("Adding " + res[1].toUpperCase() + " as Other dog for " + dogList[li].aId + ", li=" + li);
                                                 dogList[li].others.set(res[1].toUpperCase(), null);
                                             }
                                         }
@@ -225,7 +225,7 @@ javascript:(function(){
                                             }
 
                                             if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
-                                                console.log("Adding " + res[1].toUpperCase() + " as other dog for Priority " + dogList[li].aId + ", li=" + li);
+                                                console.log("Adding " + res[1].toUpperCase() + " as Other dog for Priority " + dogList[li].aId + ", li=" + li);
                                                 dogList[li].others.set(res[1].toUpperCase(), null);
                                             }
                                         }
@@ -244,11 +244,19 @@ javascript:(function(){
                         pdReq.send(null);
                     } else { 
                         document.write("<br>Processing gathered data");
-                        console.log("Processing others");
+                        console.log("Processing Others");
                         console.log("List before filter");
                         console.log(dogList);
-                        console.log("List after filtering for others > 0");
+                        console.log("List after filtering for Others > 0");
                         dogList = dogList.filter(d=>d.others.size>0);
+                        /* Re-establish where the Priority dogs index is after the fitler */ 
+                        for (k=0;k<dogList.length;k++) {
+                            if (dogList[k].lnk != null) {
+                                PRI_DOG_START = k;
+                                console.log("Reset Priority dog start after filtering to be: " + PRI_DOG_START);
+                                break;
+                            }
+                        }
                         console.log(dogList);
                         li = 0;
                         processOthers();
@@ -298,7 +306,7 @@ javascript:(function(){
             for ([aId,v] of dogList[z].others) {
                 console.log("processOthers for " + dogList[z].aId + ": Others value=" + JSON.stringify(v));
                 if ((!doSS && v == null) || (doSS && Object.keys(v).length === 0)) {
-                    console.log("Getting " + (!doSS?"details":"SS") + " for other dog " + aId);
+                    console.log("Getting " + (!doSS?"details":"SS") + " for Other dog: " + aId);
                     doSend = true;
                     li = z;
 
@@ -363,7 +371,8 @@ javascript:(function(){
                      * We could also pre-filter by checking the SS status to see if its a non-terminal
                      * status like "Under Review"
                      */
-                   console.log("Checking if Other dog " + aId + " is in Priority list");
+                   console.log("Checking if Other dog " + aId + " is in Priority list (starting idx: " + PRI_DOG_START + ")");
+                   console.log(dogList);
                    for (k=PRI_DOG_START;k<dogList.length;k++) {
                        if (dogList[k].aId == aId) {
                            console.log("Other dog " + dogList[k].aId + " found in Priority list for " + aId);
