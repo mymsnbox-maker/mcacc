@@ -27,6 +27,16 @@ javascript:(function(){
         default: break;
     }
 
+    var SHOWN_DAYS = 7;
+    var dayStr = prompt(
+        "Show intakes for how many days in the past from today?" +
+        "\n\nDefaults to " + SHOWN_DAYS + " days if left blank, use any number for that amount of days, or 'all' for every intake");
+    if (dayStr.trim().toLowerCase() == "all") {
+        SHOWN_DAYS = "";
+    } else if (dayStr.trim() !== "" && !isNaN(Number(dayStr))) {
+        SHOWN_DAYS = dayStr;
+    }
+
     var S_REQ1 = document.location.protocol + "//apps.pets.maricopa.gov/adoptPets/Home/AnimalGrid?sizeFilter=1&ageFilter=1&genderFilter=1&pageNumber=";
     var S_REQ2 = "&kennelNum=&env=https%3A%2F%2Fapps.pets.maricopa.gov%2FadoptPets&fosterEligible=false" 
                     + "&animalTypeFilter=All&isLongTimer=false&isReadyToday=false&breedFilter=Any%20Breed"
@@ -272,6 +282,12 @@ javascript:(function(){
 
     function showResults() {
         var count = 0;
+        if (SHOWN_DAYS != "") {
+            console.log("Filtering dogs whose intake date is newer than " + SHOWN_DAYS);
+            dogList = dogList.filter(d => {
+                return new Date(d.intakeDate) >= new Date(Date.now() - SHOWN_DAYS * 24 * 60 * 60 * 1000)
+            });
+        }
         dogList.sort(function(a,b) {return b.intakeDate.localeCompare(a.intakeDate, "en", {numeric: true})});
         console.log("showResults");
         console.log(dogList);
@@ -300,8 +316,9 @@ javascript:(function(){
                     "<td class='reason'>Return Reason:<br>" + d.rtnRes + "</td>" +
                     "</tr>";
         });
-        tableStr = "<figure>Dogs By Intake Date (" + dt.toLocaleDateString() +  " " + dt.toLocaleTimeString() 
-            + ")<br>Location: " + l + "<br>Number of rows: " + count + "</figure></table>" + bodyStr + "</table>";
+        tableStr = "<figure>Dogs By Intake Date (" + dt.toLocaleDateString() + " " + dt.toLocaleTimeString() +
+            ")<br>Location: " + l + "<br>Filter: " + (SHOWN_DAYS == "" ? "Show All" : "Show Last " + SHOWN_DAYS + " days") +
+            "<br>Number of rows: " + count + "</figure></table>" + bodyStr + "</table>";
         document.open();
         document.write(tableStr);
   
