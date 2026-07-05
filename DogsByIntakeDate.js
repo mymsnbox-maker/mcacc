@@ -52,7 +52,7 @@ javascript:(function(){
     var PD_REQ = document.location.protocol + "//apps.pets.maricopa.gov";
     
     document.open();
-    document.write("Getting dogs from " + l + " ...");
+    document.write("Getting dogs from " + l + "...");
     req.open( "GET", S_REQ1 + pageNum + S_REQ2, true);
     req.send(null);
 
@@ -75,10 +75,11 @@ javascript:(function(){
                     totalCount = doc.getElementsByClassName("searchCountLabel")[0].innerText.trim().split(" ")[0];
                     if (Math.floor(totalCount/ENTRIES_PER_PAGE) > pageNum) {
                         pageNum++;
+                        spinner(pageNum);
                         req.open("GET", S_REQ1 + pageNum + S_REQ2, true);
                         req.send(null);
                     } else { 
-                        document.write("<br>Getting details for each dog ...");
+                        document.write("<br>Getting details for each dog...");
                         li = 0;
                         dReq.open("GET", D_REQ + dogList[li].aId, true);
                         dReq.send(null);
@@ -113,8 +114,7 @@ javascript:(function(){
                             let rtnRes = "";
                             for (let sp of spans) {
                                 let spl = sp.innerText;
-                                /* this delimiter is not perfect - if staff mistyped or altered, it throws everything off
-                                 */
+                                /* this delimiter is not perfect - if staff mistyped or altered, it throws everything off */
                                 let resps = spl.split("--");
                                 for (r=0; r<resps.length; r++) {
                                     if ((resps[r].match(/how long have you had the animal/i) != null) || 
@@ -140,7 +140,7 @@ javascript:(function(){
 
                     li++;
                     if (li < dogList.length) {
-                        document.write(">");
+                        spinner(li);
                         dReq.open("GET", D_REQ + dogList[li].aId, true);
                         dReq.send(null);
                     } else {
@@ -203,10 +203,10 @@ javascript:(function(){
                         pReq.open("GET", P_REQ + pageNum, true);
                         pReq.send(null);
                     } else { 
-                        document.write("<br>Getting Priority dog details...");
+                        li = PRI_DOG_START;
                         console.log("Getting priority details");
                         console.log(dogList);
-                        li = PRI_DOG_START;
+                        document.write("<br>Getting Priority dog details...");
                         pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
                         pdReq.send(null);
                     }
@@ -269,7 +269,7 @@ javascript:(function(){
 
                     if (li < dogList.length - 1) {
                         li++;
-                        document.write("<");
+                        spinner(li);
                         pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
                         pdReq.send(null);
                     } else { 
@@ -330,6 +330,11 @@ javascript:(function(){
                             "td {text-align:center;padding:10px;word-wrap:break-word} b {background-color:yellow}";
         document.head.appendChild(style);
         document.close();
+    }
+
+    function spinner(idx) {
+        document.write(idx%3==0?"<":idx%3==1?">":idx%3==2?"-":"");
+        document.write(idx%(40)==0?"<br>":"");
     }
 
 })();
