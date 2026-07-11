@@ -222,10 +222,11 @@ javascript:(function(){
                             let ps = dc.parentElement.getElementsByClassName("card-body")[0].getElementsByTagName("p");
                             for (let p of ps) {
                                 let spl = p.innerText;
-                                /*if (spl.match(/together|came in with|found with/i) != null) {*/
+                                /*if (spl.match(/together|came in with|found with/i) != null) {
                                     console.log("Found intake together entry in priority");
+                                */
                                     for (let np of spl.split(/\s+/)) {
-                                        res = np.match(/(A?[0-9]{7})/i);
+                                        res = np.match(/(?<=[^P])([0-9]{7})/i);
 
                                         if (res != null) {
                                             if (!res[1].toLowerCase().startsWith("a")) {
