@@ -106,10 +106,18 @@ javascript:(function(){
                         if (dc.innerText.trim().toLowerCase().startsWith("intake")) {
                             let spans = dc.parentElement.getElementsByClassName("card-body")[0].getElementsByTagName("span");
                             for (let sp of spans) {
+                                /* TODO: Staff may not add accompanying text, just A#s
+                                 * A5167628 A5167624 A5167623
+                                 * Assuming that in the intake section, any other A# reference must be related
+                                 * However, when the dog was assigned a new A#, it will show a little odd
+                                 */
                                 let spl = sp.innerText;
-                                if (spl.match(/together|came in with|found with/i) != null) {
+                                /*if (spl.match(/together|came in with|found with/i) != null) { */
                                     for (let np of spl.split(/\s+/)) {
-                                        res = np.match(/(A?[0-9]{7})/i);
+                                        /* Filter away adopter numbers - ex. P{7} 
+                                         * This regex will cause the leading letter (i.e. A) to be stripped
+                                         */
+                                        res = np.match(/(?<=[^P])([0-9]{7})/i);
                                         if (res != null) {
                                             if (!res[1].toLowerCase().startsWith("a")) {
                                                 res[1] = "A" + res[1];
@@ -121,7 +129,7 @@ javascript:(function(){
                                             }
                                         }
                                     }
-                                }
+                                /*}*/
                             }
                             break intakeNotes;
                         }
@@ -214,7 +222,7 @@ javascript:(function(){
                             let ps = dc.parentElement.getElementsByClassName("card-body")[0].getElementsByTagName("p");
                             for (let p of ps) {
                                 let spl = p.innerText;
-                                if (spl.match(/together|came in with|found with/i) != null) {
+                                /*if (spl.match(/together|came in with|found with/i) != null) {*/
                                     console.log("Found intake together entry in priority");
                                     for (let np of spl.split(/\s+/)) {
                                         res = np.match(/(A?[0-9]{7})/i);
@@ -230,7 +238,7 @@ javascript:(function(){
                                             }
                                         }
                                     }
-                                }
+                                /*}*/
                             }
                             break intakeNotes;
                         }
