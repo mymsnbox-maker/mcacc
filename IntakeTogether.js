@@ -18,11 +18,11 @@ javascript:(function(){
     }
 
     var l = "East";
-    var pl = "East Shelter";
+    var PL = "East Shelter";
     var lStr = prompt("Location (defaults to " + l + "): e(ast), w(west), b(oth)");
     switch (lStr) {
-        case 'w': l = "West"; pl = "West Shelter"; break;
-        case 'b': l = "All"; pl = "Both Shelters";break;
+        case 'w': l = "West"; PL = "West Shelter"; break;
+        case 'b': l = "All"; PL = "Both Shelters";break;
         default: break;
     }
 
@@ -40,12 +40,13 @@ javascript:(function(){
                     + "&shelterFilter=" + l;
     var D_REQ = document.location.protocol + "//apps.pets.maricopa.gov/adoptPets/Home/Details/";
     var SS_REQ = document.location.protocol + "//apps.pets.maricopa.gov/SelfService/Home/AnimalInfo?AnimalId=";
+    /* Note: Don't filter by shelter here because we need to check across ALL shelters when doing Other dog linking */
     var P_REQ = document.location.protocol +
         '//apps.pets.maricopa.gov/priority/Home/AnimalGrid?' + 
         'submissionObj=%7B%22TypeChoice%22%3A%22ANY%22%2C%22SizeChoice%22%3A%22Any%20Size%22%2C%22' +
         'BreedChoice%22%3A%22Any%20Breed%22%2C%22AgeChoice%22%3A%221%22%2C%22GenderChoice%22%3A%22Any%20' +
         'Gender%22%2C%22ReasonChoice%22%3A%22Any%20Reason%22%2C%22AnimalName%22%3A%22Any%20Animal%22%2C%22' +
-        'AnimalId%22%3A%22Any%20ID%22%2C%22KennelNumber%22%3A%22Any%20Kennel%22%2C%22ShelterChoice%22%3A%22' + pl + '%22%7D' + 
+        'AnimalId%22%3A%22Any%20ID%22%2C%22KennelNumber%22%3A%22Any%20Kennel%22%2C%22ShelterChoice%22%3A%22Both%20Shelters%22%7D' + 
         '&env=https%3A%2F%2Fapps.pets.maricopa.gov%2Fpriority%2F&pageNumber=';
     var PD_REQ = document.location.protocol + "//apps.pets.maricopa.gov";
     
@@ -111,25 +112,24 @@ javascript:(function(){
                                  * Assuming that in the intake section, any other A# reference must be related
                                  * However, when the dog was assigned a new A#, it will show a little odd
                                  */
-                                let spl = sp.innerText;
-                                /*if (spl.match(/together|came in with|found with/i) != null) { */
-                                    for (let np of spl.split(/\s+/)) {
-                                        /* Filter away adopter numbers - ex. P{7} 
-                                         * This regex will cause the leading letter (i.e. A) to be stripped
-                                         */
-                                        res = np.match(/(?<=[^P])([0-9]{7})/i);
-                                        if (res != null) {
-                                            if (!res[1].toLowerCase().startsWith("a")) {
-                                                res[1] = "A" + res[1];
-                                            }
 
-                                            if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
-                                                console.log("Adding " + res[1].toUpperCase() + " as Other dog for " + dogList[li].aId + ", li=" + li);
-                                                dogList[li].others.set(res[1].toUpperCase(), null);
-                                            }
+                                let spl = sp.innerText;
+                                for (let np of spl.split(/\s+/)) {
+                                    /* Filter away adopter numbers - ex. P{7} 
+                                     * This regex will cause the leading letter (i.e. A) to be stripped
+                                     */
+                                    res = np.match(/(?<=^|[^P])([0-9]{7})/i);
+                                    if (res != null) {
+                                        if (!res[1].toLowerCase().startsWith("a")) {
+                                            res[1] = "A" + res[1];
+                                        }
+
+                                        if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+                                            console.log("Adding " + res[1].toUpperCase() + " as Other dog for " + dogList[li].aId + ", li=" + li);
+                                            dogList[li].others.set(res[1].toUpperCase(), null);
                                         }
                                     }
-                                /*}*/
+                                }
                             }
                             break intakeNotes;
                         }
@@ -156,6 +156,11 @@ javascript:(function(){
         }
     };
 
+    /* TODO: Change to get all priority portal dogs (vs filtering by shelter), then filter by shelter
+     * This is in case an Other dog is on the priority portal AND at a different shelter
+     *
+     * Use all dogs when checking for Other, but when showing dogs on the priority portal, have to filter
+     * the returned results to only pick from the selected shelter */
     pReq.onreadystatechange = function() {
         var done = 4, ok = 200;
         if (pReq.readyState == done) {
@@ -198,11 +203,24 @@ javascript:(function(){
                         pReq.send(null);
                     } else { 
                         document.write("<br>Getting Priority dog details...");
-                        console.log("Getting priority details");
+                        /* If a single shelter location was selected, only get details for that shelter */
+                        console.log("Getting priority details - starting at index " + PRI_DOG_START);
                         console.log(dogList);
                         li = PRI_DOG_START;
-                        pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
-                        pdReq.send(null);
+                        while (li<dogList.length && !PL.includes("Both") && !dogList[li].loc.includes(PL)) {
+                            console.log("Skipping over Priority dog at idx " + li + " since not at " + PL);
+                            li++;
+                        }
+                        if (li<dogList.length) {
+                            pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
+                            pdReq.send(null);
+                        } else {
+                            /* No priority dogs for this shelter */
+                            console.log("No priority dogs at shelter: " + PL);
+                            console.log(dogList);
+                            li = 0;
+                            processOthers();
+                        }
                     }
                 }
             }
@@ -222,43 +240,53 @@ javascript:(function(){
                             let ps = dc.parentElement.getElementsByClassName("card-body")[0].getElementsByTagName("p");
                             for (let p of ps) {
                                 let spl = p.innerText;
-                                /*if (spl.match(/together|came in with|found with/i) != null) {
-                                    console.log("Found intake together entry in priority");
-                                */
-                                    for (let np of spl.split(/\s+/)) {
-                                        res = np.match(/(?<=[^P])([0-9]{7})/i);
+                                for (let np of spl.split(/\s+/)) {
+                                    res = np.match(/(?<=^|[^P])([0-9]{7})/i);
 
-                                        if (res != null) {
-                                            if (!res[1].toLowerCase().startsWith("a")) {
-                                                res[1] = "A" + res[1];
-                                            }
+                                    if (res != null) {
+                                        if (!res[1].toLowerCase().startsWith("a")) {
+                                            res[1] = "A" + res[1];
+                                        }
 
-                                            if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
-                                                console.log("Adding " + res[1].toUpperCase() + " as Other dog for Priority " + dogList[li].aId + ", li=" + li);
-                                                dogList[li].others.set(res[1].toUpperCase(), null);
-                                            }
+                                        if (res[1].toLowerCase() != dogList[li].aId.toLowerCase()) {
+                                            console.log("Adding " + res[1].toUpperCase() + " as Other dog for Priority " + dogList[li].aId + ", li=" + li);
+                                            dogList[li].others.set(res[1].toUpperCase(), null);
                                         }
                                     }
-                                /*}*/
+                                }
                             }
                             break intakeNotes;
                         }
                     }
 
 
+                    let doProcessOthers = true;
                     if (li < dogList.length - 1) {
+                        doProcessOthers = false;
                         li++;
                         document.write("<");
-                        pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
-                        pdReq.send(null);
-                    } else { 
+
+                        while (li<dogList.length && !PL.includes("Both") && !dogList[li].loc.includes(PL)) {
+                            li++;
+                        }
+                        if (li<dogList.length) {
+                            pdReq.open("GET", PD_REQ + dogList[li].lnk, true);
+                            pdReq.send(null);
+                        } else {
+                            console.log("No remaining priority dogs at shelter " + PL);
+                            doProcessOthers = true;
+                        }
+                    } 
+
+                    if (doProcessOthers) {
+                        /*
                         document.write("<br>Processing gathered data");
                         console.log("Processing Others");
                         console.log("List before filter");
                         console.log(dogList);
                         console.log("List after filtering for Others > 0");
                         dogList = dogList.filter(d=>d.others.size>0);
-                        /* Re-establish where the Priority dogs index is after the fitler */ 
+                        console.log(dogList);
                         for (k=0;k<dogList.length;k++) {
                             if (dogList[k].lnk != null) {
                                 PRI_DOG_START = k;
@@ -266,9 +294,10 @@ javascript:(function(){
                                 break;
                             }
                         }
-                        console.log(dogList);
+                        */
                         li = 0;
                         processOthers();
+
                     }
                 }
             }
@@ -312,27 +341,29 @@ javascript:(function(){
         var doSend = false;
         console.log("doSS: " + doSS + ", li: " + li);
         for (let z=li; z<dogList.length; z++) {
-            for ([aId,v] of dogList[z].others) {
-                console.log("processOthers for " + dogList[z].aId + ": Others value=" + JSON.stringify(v));
-                if ((!doSS && v == null) || (doSS && Object.keys(v).length === 0)) {
-                    console.log("Getting " + (!doSS?"details":"SS") + " for Other dog: " + aId);
-                    doSend = true;
-                    li = z;
-
-                    document.write(".");
-                    if (!doSS) {
-                        oReq.open("GET", D_REQ + aId, true);
-                        oReq.send(null);
-                    } else {
-                        ssReq.open("GET", SS_REQ + aId, true);
-                        ssReq.send(null);
+            if(dogList[z].others.size > 0) {
+                for ([aId,v] of dogList[z].others) {
+                    console.log("processOthers for " + dogList[z].aId + ": Others value=" + JSON.stringify(v));
+                    if ((!doSS && v == null) || (doSS && Object.keys(v).length === 0)) {
+                        console.log("Getting " + (!doSS?"details":"SS") + " for Other dog: " + aId);
+                        doSend = true;
+                        li = z;
+    
+                        document.write(".");
+                        if (!doSS) {
+                            oReq.open("GET", D_REQ + aId, true);
+                            oReq.send(null);
+                        } else {
+                            ssReq.open("GET", SS_REQ + aId, true);
+                            ssReq.send(null);
+                        }
+                        break;
                     }
+                }
+    
+                if (doSend) {
                     break;
                 }
-            }
-
-            if (doSend) {
-                break;
             }
         }
         if (!doSend) {
@@ -381,7 +412,6 @@ javascript:(function(){
                      * status like "Under Review"
                      */
                    console.log("Checking if Other dog " + aId + " is in Priority list (starting idx: " + PRI_DOG_START + ")");
-                   console.log(dogList);
                    for (k=PRI_DOG_START;k<dogList.length;k++) {
                        if (dogList[k].aId == aId) {
                            console.log("Other dog " + dogList[k].aId + " found in Priority list for " + aId);
@@ -398,8 +428,16 @@ javascript:(function(){
 
     function showResults() {
         var count = 0;
-        dogList.sort(function(a,b) {return a.loc.localeCompare(b.loc, "en", {numeric: true})});
         console.log("showResults");
+        /* Inefficient to not trim dogs w/o Others before removing the priority dogs that aren't at the current
+         * shelter, but if we trim first we'll have to re-establish where PRI_DOG_START is
+         */
+        if (!PL.includes("Both")) {
+            console.log("Removing Priority portal dogs not at shelter " + PL);
+            dogList = dogList.filter((v,i)=>i<PRI_DOG_START || (i>=PRI_DOG_START && v.loc.includes(PL)));
+        }
+        dogList = dogList.filter(d=>d.others.size>0);
+        dogList.sort(function(a,b) {return a.loc.localeCompare(b.loc, "en", {numeric: true})});
         console.log(dogList);
 
         var bodyStr = "<table border='1''>";
